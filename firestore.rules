@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Flutter login writes users/{uid}; keep it owner-only.
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Chat: client can READ live (snapshots); all WRITES go through the Python backend.
+    match /conversations/{cid} {
+      allow read: if request.auth != null && request.auth.uid in resource.data.participants;
+      allow write: if false;
+
+      match /messages/{mid} {
+        allow read: if request.auth != null
+          && request.auth.uid in get(/databases/$(database)/documents/conversations/$(cid)).data.participants;
+        allow write: if false;
+      }
+    }
+
+    // listings, rates, call_logs: backend only (Admin SDK bypasses these rules)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
