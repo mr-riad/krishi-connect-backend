@@ -4,3 +4,5 @@ __pycache__/
 serviceAccountKey.json
 *.pyc
 .pytest_cache/
+*.db
+uploads/

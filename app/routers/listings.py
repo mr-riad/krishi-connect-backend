@@ -41,20 +41,25 @@ def create_listing(
     user: CurrentUser = Depends(require_farmer),
     store: DocStore = Depends(get_store),
 ):
-    doc = body.model_dump(mode="json")
-    doc.update(
-        status=ListingStatus.active.value,
-        farmer_id=user.uid,
-        farmer_name=user.display_name,
-        farmer_phone=user.phone,
-        created_at=now(),
-    )
-    # fall back to the farmer's saved profile location
-    doc["latitude"] = doc["latitude"] if doc["latitude"] is not None else user.latitude
-    doc["longitude"] = doc["longitude"] if doc["longitude"] is not None else user.longitude
-    _derive(doc)
-    doc_id = store.add(COL, doc)
-    return ListingOut(**doc, id=doc_id)
+    try:
+        doc = body.model_dump(mode="json")
+        doc.update(
+            status=ListingStatus.active.value,
+            farmer_id=user.uid,
+            farmer_name=user.display_name,
+            farmer_phone=user.phone,
+            created_at=now(),
+        )
+        # fall back to the farmer's saved profile location
+        doc["latitude"] = doc["latitude"] if doc["latitude"] is not None else user.latitude
+        doc["longitude"] = doc["longitude"] if doc["longitude"] is not None else user.longitude
+        _derive(doc)
+        doc_id = store.add(COL, doc)
+        return ListingOut(**doc, id=doc_id)
+    except Exception as e:
+        import logging
+        logging.getLogger("krishi.listings").exception("create_listing error: %s", e)
+        raise HTTPException(500, detail=f"পোস্ট প্রকাশে ত্রুটি: {str(e)}")
 
 
 @router.get("", response_model=ListingPage)

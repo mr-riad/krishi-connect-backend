@@ -37,20 +37,25 @@ def publish_rate(
     user: CurrentUser = Depends(require_buyer),
     store: DocStore = Depends(get_store),
 ):
-    doc = body.model_dump(mode="json")
-    created = now()
-    doc.update(
-        active=True,
-        buyer_id=user.uid,
-        buyer_name=user.display_name,
-        buyer_phone=user.phone,
-        created_at=created,
-        expires_at=created + timedelta(days=body.valid_days),
-    )
-    doc["latitude"] = doc["latitude"] if doc["latitude"] is not None else user.latitude
-    doc["longitude"] = doc["longitude"] if doc["longitude"] is not None else user.longitude
-    _derive(doc)
-    return RateOut(**doc, id=store.add(COL, doc))
+    try:
+        doc = body.model_dump(mode="json")
+        created = now()
+        doc.update(
+            active=True,
+            buyer_id=user.uid,
+            buyer_name=user.display_name,
+            buyer_phone=user.phone,
+            created_at=created,
+            expires_at=created + timedelta(days=body.valid_days),
+        )
+        doc["latitude"] = doc["latitude"] if doc["latitude"] is not None else user.latitude
+        doc["longitude"] = doc["longitude"] if doc["longitude"] is not None else user.longitude
+        _derive(doc)
+        return RateOut(**doc, id=store.add(COL, doc))
+    except Exception as e:
+        import logging
+        logging.getLogger("krishi.rates").exception("publish_rate error: %s", e)
+        raise HTTPException(500, detail=f"দর প্রকাশে ত্রুটি: {str(e)}")
 
 
 @router.get("", response_model=RatePage)
