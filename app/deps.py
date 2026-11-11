@@ -13,14 +13,39 @@ _bearer = HTTPBearer(auto_error=False)
 
 
 def _init_firebase() -> None:
+    """Initialize Firebase Admin SDK.
+
+    Credential resolution order:
+      1. FIREBASE_CREDENTIALS_JSON  – full JSON string of serviceAccountKey
+         (best for cloud platforms like Render, Railway, Heroku)
+      2. FIREBASE_CREDENTIALS_PATH  – path to serviceAccountKey.json file
+         (best for local development)
+      3. No credential arg           – falls back to Application Default Credentials
+         (works on Google Cloud Run / App Engine automatically)
+    """
+    import json
+
     import firebase_admin
     from firebase_admin import credentials
 
     if firebase_admin._apps:
         return
+
     s = get_settings()
-    cred = credentials.Certificate(s.firebase_credentials_path) if s.firebase_credentials_path else None
-    opts = {"storageBucket": s.firebase_storage_bucket} if s.firebase_storage_bucket else None
+
+    if s.firebase_credentials_json:
+        cred_dict = json.loads(s.firebase_credentials_json)
+        cred = credentials.Certificate(cred_dict)
+    elif s.firebase_credentials_path:
+        cred = credentials.Certificate(s.firebase_credentials_path)
+    else:
+        # Application Default Credentials (GCP environments)
+        cred = None  # firebase_admin will use ADC automatically
+
+    opts: dict = {}
+    if s.firebase_storage_bucket:
+        opts["storageBucket"] = s.firebase_storage_bucket
+
     firebase_admin.initialize_app(cred, opts)
 
 
@@ -69,20 +94,32 @@ def get_current_user(
     store: DocStore = Depends(get_store),
 ) -> CurrentUser:
     if creds is None:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Missing bearer token")
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            detail="অথেনটিকেশন ব্যর্থ (401 Unauthorized): Bearer token দেওয়া হয়নি। দয়া করে লগইন করুন।",
+        )
     settings = get_settings()
     token_phone = None
     if settings.auth_disabled:
-        uid = creds.credentials  # DEV ONLY: token is the uid itself
+        # DEV ONLY: token is treated as the uid directly
+        uid = creds.credentials
     else:
         try:
             from firebase_admin import auth
 
             decoded = auth.verify_id_token(creds.credentials)
-        except Exception:
-            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired Firebase token")
-        uid = decoded["uid"]
-        token_phone = decoded.get("phone_number")
+            uid = decoded["uid"]
+            token_phone = decoded.get("phone_number")
+        except Exception as exc:
+            import logging
+            logging.getLogger("krishi.auth").warning("Token verify failed: %s", exc)
+            raise HTTPException(
+                status.HTTP_401_UNAUTHORIZED,
+                detail=(
+                    "অথেনটিকেশন ব্যর্থ (401 Unauthorized): Invalid or expired Firebase token। "
+                    "দয়া করে লগইন করুন।"
+                ),
+            )
 
     doc = store.get("users", uid) or {}
     return CurrentUser(

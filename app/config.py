@@ -12,7 +12,13 @@ class Settings(BaseSettings):
 
     use_firebase: bool = False
     auth_disabled: bool = False
+
+    # Option 1: path to serviceAccountKey.json file
     firebase_credentials_path: str | None = None
+    # Option 2: the entire serviceAccountKey.json content as a JSON string
+    # (Useful for Render.com / Railway / Heroku where you cannot upload files)
+    firebase_credentials_json: str | None = None
+
     firebase_storage_bucket: str | None = None
     max_upload_mb: int = 5
 
