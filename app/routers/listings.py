@@ -11,7 +11,7 @@ from ..schemas import (
     ListingStatus, ListingUpdate, RateOut, Unit,
 )
 from ..storage import FileStorage
-from ..utils import norm, now
+from ..utils import is_expired, norm, now
 
 router = APIRouter(prefix="/listings", tags=["Farmer Listings"])
 COL = "listings"
@@ -83,7 +83,8 @@ def search_listings(
     _: CurrentUser = Depends(get_current_user),
     store: DocStore = Depends(get_store),
 ):
-    if (sort == ListingSort.nearest or radius_km) and (lat is None or lng is None):
+    has_radius = isinstance(radius_km, (int, float))
+    if (sort == ListingSort.nearest or has_radius) and (lat is None or lng is None):
         raise HTTPException(400, "lat and lng are required for nearest sort / radius filter")
 
     where = [("status", "==", ListingStatus.active.value)]
@@ -100,21 +101,21 @@ def search_listings(
     for r in rows:
         if qk and qk not in r.get("crop_key", ""):
             continue
-        if min_price is not None and r["price_per_kg"] < min_price:
+        if isinstance(min_price, (int, float)) and r["price_per_kg"] < min_price:
             continue
-        if max_price is not None and r["price_per_kg"] > max_price:
+        if isinstance(max_price, (int, float)) and r["price_per_kg"] > max_price:
             continue
-        if min_quantity is not None and r["quantity_kg"] < min_quantity:
+        if isinstance(min_quantity, (int, float)) and r["quantity_kg"] < min_quantity:
             continue
-        if max_quantity is not None and r["quantity_kg"] > max_quantity:
+        if isinstance(max_quantity, (int, float)) and r["quantity_kg"] > max_quantity:
             continue
         hd = r.get("harvest_date")
-        if harvest_from and (not hd or hd < harvest_from):
+        if isinstance(harvest_from, str) and (not hd or str(hd) < harvest_from):
             continue
-        if harvest_to and (not hd or hd > harvest_to):
+        if isinstance(harvest_to, str) and (not hd or str(hd) > harvest_to):
             continue
-        r["distance_km"] = distance_between(r, lat, lng)
-        if radius_km and (r["distance_km"] is None or r["distance_km"] > radius_km):
+        r["distance_km"] = distance_between(r, lat if isinstance(lat, (int, float)) else None, lng if isinstance(lng, (int, float)) else None)
+        if has_radius and (r["distance_km"] is None or r["distance_km"] > radius_km):
             continue
         out.append(r)
 
@@ -126,8 +127,10 @@ def search_listings(
     else:
         out.sort(key=lambda r: r["created_at"], reverse=True)
 
-    page = out[offset: offset + limit]
-    return ListingPage(total=len(out), limit=limit, offset=offset, items=[ListingOut(**r) for r in page])
+    lim = limit if isinstance(limit, int) else 20
+    off = offset if isinstance(offset, int) else 0
+    page = out[off: off + lim]
+    return ListingPage(total=len(out), limit=lim, offset=off, items=[ListingOut(**r) for r in page])
 
 
 @router.get("/mine", response_model=list[ListingOut])
@@ -214,7 +217,7 @@ def matching_rates(
     rates = store.query("rates", where=[("active", "==", True)], limit=FETCH_CAP)
     result = []
     for r in rates:
-        if r["expires_at"] <= now() or not crop_matches(listing, r):
+        if is_expired(r.get("expires_at")) or not crop_matches(listing, r):
             continue
         ok, dist = location_matches(listing, r, radius_km)
         if ok:

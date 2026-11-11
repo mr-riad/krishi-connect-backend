@@ -47,7 +47,9 @@ def start_conversation(
         raise HTTPException(400, "You cannot chat with yourself")
     other = store.get("users", body.participant_id)
     if not other:
-        raise HTTPException(404, "User not found")
+        # Create a stub record so chat never hard-fails on first contact
+        other = {"uid": body.participant_id, "name": "ইউজার"}
+        store.set("users", body.participant_id, other, merge=True)
 
     cid = "_".join(sorted([user.uid, body.participant_id]))
     existing = store.get(COL, cid)
@@ -100,8 +102,9 @@ def get_messages(
 ):
     """History / pagination. For live updates use Firestore snapshots on the client."""
     _load_member_conv(store, cid, user.uid)
-    where = [("created_at", "<", before)] if before else []
-    rows = store.query(f"{COL}/{cid}/messages", where=where, order_by="created_at", descending=True, limit=limit)
+    where = [("created_at", "<", before)] if isinstance(before, (datetime, str)) else []
+    lim = limit if isinstance(limit, int) else 50
+    rows = store.query(f"{COL}/{cid}/messages", where=where, order_by="created_at", descending=True, limit=lim)
     rows.reverse()  # oldest -> newest
     return [MessageOut(conversation_id=cid, **{k: r[k] for k in ("id", "sender_id", "text", "created_at")}) for r in rows]
 
@@ -119,6 +122,20 @@ def send_message(
         raise HTTPException(422, "Message is empty")
     msg = {"sender_id": user.uid, "text": text, "created_at": ts}
     mid = store.add(f"{COL}/{cid}/messages", msg)
+
+    # Optional real-time Firestore sync if Firebase Admin is active
+    try:
+        import firebase_admin
+        from firebase_admin import firestore
+        if firebase_admin._apps:
+            db = firestore.client()
+            db.collection("conversations").document(cid).collection("messages").document(mid).set({
+                "sender_id": user.uid,
+                "text": text,
+                "created_at": firestore.SERVER_TIMESTAMP,
+            })
+    except Exception:
+        pass
 
     unread = conv.get("unread") or {}
     for p in conv["participants"]:

@@ -8,6 +8,24 @@ def now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def is_expired(expires_at) -> bool:
+    """Safe expiry check that works with both datetime objects and ISO strings from SQLite."""
+    if not expires_at:
+        return False
+    if isinstance(expires_at, str):
+        try:
+            exp = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+        except Exception:
+            return False
+    elif isinstance(expires_at, datetime):
+        exp = expires_at
+    else:
+        return False
+    if exp.tzinfo is None:
+        exp = exp.replace(tzinfo=timezone.utc)
+    return exp <= datetime.now(timezone.utc)
+
+
 def norm(text: str | None) -> str:
     """Case/space-insensitive key for district, upazila, crop name comparison."""
     return (text or "").strip().casefold()

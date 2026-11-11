@@ -1,3 +1,4 @@
+
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -10,7 +11,7 @@ from ..schemas import (
     UNIT_TO_KG, Category, ListingOut, ListingStatus, RateCreate, RateOut, RatePage,
     RateSort, RateUpdate, Unit,
 )
-from ..utils import norm, now
+from ..utils import is_expired, norm, now
 
 router = APIRouter(prefix="/rates", tags=["Buyer Rate Board"])
 COL = "rates"
@@ -76,7 +77,8 @@ def rate_board(
     store: DocStore = Depends(get_store),
 ):
     """Farmer view of the rate board. With lat/lng + sort=nearest this also powers 'nearby buyers'."""
-    if (sort == RateSort.nearest or radius_km) and (lat is None or lng is None):
+    has_radius = isinstance(radius_km, (int, float))
+    if (sort == RateSort.nearest or has_radius) and (not isinstance(lat, (int, float)) or not isinstance(lng, (int, float))):
         raise HTTPException(400, "lat and lng are required for nearest sort / radius filter")
 
     where = [("active", "==", True)]
@@ -88,18 +90,18 @@ def rate_board(
         where.append(("upazila_key", "==", norm(upazila)))
     rows = store.query(COL, where=where, limit=FETCH_CAP)
 
-    t, qk, out = now(), norm(q), []
+    qk, out = norm(q), []
     for r in rows:
-        if r["expires_at"] <= t:
+        if is_expired(r.get("expires_at")):
             continue
         if qk and qk not in r["crop_key"]:
             continue
-        if min_rate is not None and r["rate_per_kg"] < min_rate:
+        if isinstance(min_rate, (int, float)) and r["rate_per_kg"] < min_rate:
             continue
-        if max_rate is not None and r["rate_per_kg"] > max_rate:
+        if isinstance(max_rate, (int, float)) and r["rate_per_kg"] > max_rate:
             continue
-        r["distance_km"] = distance_between(r, lat, lng)
-        if radius_km and (r["distance_km"] is None or r["distance_km"] > radius_km):
+        r["distance_km"] = distance_between(r, lat if isinstance(lat, (int, float)) else None, lng if isinstance(lng, (int, float)) else None)
+        if has_radius and (r["distance_km"] is None or r["distance_km"] > radius_km):
             continue
         out.append(r)
 
@@ -111,7 +113,9 @@ def rate_board(
     else:
         out.sort(key=lambda r: r["created_at"], reverse=True)
 
-    return RatePage(total=len(out), limit=limit, offset=offset, items=[RateOut(**r) for r in out[offset: offset + limit]])
+    lim = limit if isinstance(limit, int) else 20
+    off = offset if isinstance(offset, int) else 0
+    return RatePage(total=len(out), limit=lim, offset=off, items=[RateOut(**r) for r in out[off: off + lim]])
 
 
 @router.get("/mine", response_model=list[RateOut])
