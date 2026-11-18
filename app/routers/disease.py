@@ -376,7 +376,7 @@ def get_disease_report(
 @router.patch("/disease-reports/{report_id}", response_model=DiseaseReportOut, summary="Update report status")
 def update_disease_report(
     report_id: str,
-    new_status: str = Query(..., description="New status: reviewed | resolved"),
+    new_status: str = Query(..., alias="status", description="New status: reviewed | resolved"),
     user: CurrentUser = Depends(get_current_user),
     store: DocStore = Depends(get_store),
 ):

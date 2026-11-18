@@ -6,13 +6,16 @@ os.environ["AUTH_DISABLED"] = "true"
 import pytest
 from fastapi.testclient import TestClient
 
+from app.db.memory import MemoryStore
 from app.deps import get_storage, get_store
 from app.main import app
 
 
 @pytest.fixture()
 def client():
-    get_store.cache_clear()
+    store = get_store()
+    if hasattr(store, "clear"):
+        store.clear()
     get_storage.cache_clear()
     return TestClient(app)
 

@@ -168,6 +168,11 @@ def require_role(role: str):
         if not user.role:
             user.role = role
             store.set("users", user.uid, {"role": role, "uid": user.uid}, merge=True)
+        elif user.role != role:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN,
+                f"Only {role}s can perform this action",
+            )
         return user
 
     return checker
