@@ -2,7 +2,7 @@ import json
 import sqlite3
 import uuid
 from copy import deepcopy
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Any
 
 from .base import DocStore, Where
@@ -23,6 +23,29 @@ def _match(doc: dict, f: str, op: str, v: Any) -> bool:
         return isinstance(cur, (list, tuple)) and v in cur
     if cur is None:
         return False
+    # Safe date/datetime vs ISO string comparison
+    if isinstance(cur, str) and isinstance(v, (datetime, date)):
+        try:
+            cur_dt = datetime.fromisoformat(cur.replace("Z", "+00:00"))
+            v_dt = v if isinstance(v, datetime) else datetime.combine(v, datetime.min.time(), tzinfo=timezone.utc)
+            if cur_dt.tzinfo is None and v_dt.tzinfo is not None:
+                cur_dt = cur_dt.replace(tzinfo=timezone.utc)
+            elif cur_dt.tzinfo is not None and v_dt.tzinfo is None:
+                v_dt = v_dt.replace(tzinfo=timezone.utc)
+            cur, v = cur_dt, v_dt
+        except Exception:
+            pass
+    elif isinstance(v, str) and isinstance(cur, (datetime, date)):
+        try:
+            v_dt = datetime.fromisoformat(v.replace("Z", "+00:00"))
+            cur_dt = cur if isinstance(cur, datetime) else datetime.combine(cur, datetime.min.time(), tzinfo=timezone.utc)
+            if cur_dt.tzinfo is None and v_dt.tzinfo is not None:
+                cur_dt = cur_dt.replace(tzinfo=timezone.utc)
+            elif cur_dt.tzinfo is not None and v_dt.tzinfo is None:
+                v_dt = v_dt.replace(tzinfo=timezone.utc)
+            cur, v = cur_dt, v_dt
+        except Exception:
+            pass
     if op == "<":
         return cur < v
     if op == ">":
@@ -56,6 +79,11 @@ class SqliteStore(DocStore):
             self._conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_coll ON documents(collection)"
             )
+
+    def clear(self) -> None:
+        """Clear all stored documents (used in tests and reset)."""
+        with self._conn:
+            self._conn.execute("DELETE FROM documents")
 
     def close(self) -> None:
         if self._conn:
