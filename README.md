@@ -9,6 +9,7 @@ FastAPI + Firebase (Firestore, Storage, Auth). Marketplace & Communication modul
 | 2. Buyer rate board & location match | `POST /rates`, `GET /rates` (district/upazila/lat,lng), `GET /rates/{id}/matching-listings`, `GET /listings/{id}/matching-rates` |
 | 3. Call & chat | `POST /calls`, `POST /chats`, `GET /chats`, `GET/POST /chats/{id}/messages`, `POST /chats/{id}/read` |
 | 4. Search / filter / sort | `GET /listings?q=&category=&min_price=&max_price=&min_quantity=&max_quantity=&harvest_from=&harvest_to=&district=&upazila=&lat=&lng=&radius_km=&sort=newest\|price_asc\|nearest` |
+| 5. Intercropping & Seasonal Calendar | `GET /calendar`, `GET /calendar/season/{season_id}`, `GET /calendar/month/{month}`, `GET /intercrop`, `GET /intercrop/season/{season_id}`, `GET /intercrop/crop/{crop_id}`, `GET /intercrop/companions/{crop_id}` |
 | Profile | `GET/PUT /users/me` |
 
 Interactive docs: http://localhost:8000/docs
