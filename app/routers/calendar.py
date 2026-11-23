@@ -1,6 +1,5 @@
 """
 Router for Seasonal Crop Calendar & Intercropping Guide.
-
 Endpoints:
   GET /calendar                       → Full 3-season calendar
   GET /calendar/season/{season_id}    → Single season's crops
@@ -11,6 +10,8 @@ Endpoints:
   GET /intercrop/crop/{crop_id}       → Combos involving a specific crop
   GET /intercrop/companions/{crop_id} → Direct companion list for a crop
 """
+
+
 
 from datetime import datetime, timezone
 

@@ -146,9 +146,16 @@ def get_current_user(
         }
         store.set("users", uid, doc, merge=True)
 
+    # Auto-promote UIDs listed in ADMIN_UIDS setting
+    admin_uids = [u.strip() for u in get_settings().admin_uids.split(",") if u.strip()]
+    effective_role = doc.get("role")
+    if uid in admin_uids and effective_role != "admin":
+        effective_role = "admin"
+        store.set("users", uid, {"role": "admin", "uid": uid}, merge=True)
+
     return CurrentUser(
         uid=uid,
-        role=doc.get("role"),
+        role=effective_role,
         name=doc.get("name"),
         phone=normalize_bd_phone(doc.get("phone") or token_phone),
         district=doc.get("district"),
@@ -175,3 +182,4 @@ def require_role(role: str):
 
 require_farmer = require_role("farmer")
 require_buyer = require_role("buyer")
+require_admin = require_role("admin")

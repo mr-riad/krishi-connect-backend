@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     firebase_storage_bucket: str | None = None
     max_upload_mb: int = 5
 
+    # Comma-separated list of Firebase UIDs that should auto-get admin role
+    admin_uids: str = ""
+
+    # FCM sender ID (optional, informational)
+    fcm_sender_id: str | None = None
+
 
 @lru_cache
 def get_settings() -> Settings:
