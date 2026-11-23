@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Krishi Connect – Admin Panel</title>
+<style>
+  :root {
+    --green: #2d6a4f;
+    --green-light: #52b788;
+    --green-pale: #d8f3dc;
+    --bg: #f0f4f0;
+    --card: #ffffff;
+    --text: #1b4332;
+    --muted: #6c757d;
+    --danger: #d62828;
+    --warning: #f4a261;
+    --border: #cce3d1;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+
+  /* Sidebar */
+  .sidebar {
+    position: fixed; top: 0; left: 0; width: 240px; height: 100vh;
+    background: var(--green); color: white; display: flex; flex-direction: column;
+    padding: 0; z-index: 100; overflow-y: auto;
+  }
+  .sidebar-logo {
+    padding: 24px 20px 16px; font-size: 1.3rem; font-weight: 700;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+  }
+  .sidebar-logo span { font-size: 0.75rem; display: block; opacity: 0.7; font-weight: 400; margin-top: 2px; }
+  .nav-section { padding: 12px 12px 4px; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 20px;
+    cursor: pointer; border-radius: 0; transition: background 0.15s;
+    font-size: 0.9rem; opacity: 0.85;
+  }
+  .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.15); opacity: 1; }
+  .nav-item .icon { width: 20px; text-align: center; }
+
+  /* Main */
+  .main { margin-left: 240px; min-height: 100vh; }
+  .topbar {
+    background: white; padding: 14px 28px; display: flex; align-items: center;
+    justify-content: space-between; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 50;
+  }
+  .topbar h1 { font-size: 1.1rem; color: var(--green); }
+  .token-area { display: flex; align-items: center; gap: 8px; }
+  .token-area input {
+    border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px;
+    font-size: 0.85rem; width: 220px; color: var(--text);
+  }
+  .token-area button {
+    background: var(--green); color: white; border: none; padding: 7px 14px;
+    border-radius: 6px; font-size: 0.85rem; cursor: pointer;
+  }
+
+  .content { padding: 28px; }
+
+  /* Cards */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); gap: 16px; margin-bottom: 28px; }
+  .stat-card {
+    background: white; border-radius: 12px; padding: 20px;
+    border: 1px solid var(--border); text-align: center;
+  }
+  .stat-card .num { font-size: 2.2rem; font-weight: 700; color: var(--green); }
+  .stat-card .label { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+
+  /* Section */
+  .section { background: white; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 24px; }
+  .section-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .section-header h2 { font-size: 1rem; color: var(--green); }
+  .section-body { padding: 20px; }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  th { text-align: left; padding: 10px 12px; background: var(--green-pale); color: var(--green); font-weight: 600; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f8fdf9; }
+
+  /* Badges */
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;
+  }
+  .badge-green { background: var(--green-pale); color: var(--green); }
+  .badge-red { background: #fde8e8; color: var(--danger); }
+  .badge-orange { background: #fdf0e8; color: #c77700; }
+  .badge-gray { background: #f0f0f0; color: #666; }
+
+  /* Buttons */
+  .btn { padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.82rem; transition: opacity 0.15s; }
+  .btn:hover { opacity: 0.85; }
+  .btn-sm { padding: 4px 10px; font-size: 0.78rem; }
+  .btn-primary { background: var(--green); color: white; }
+  .btn-danger { background: var(--danger); color: white; }
+  .btn-warning { background: var(--warning); color: white; }
+  .btn-outline { background: transparent; border: 1px solid var(--green); color: var(--green); }
+
+  /* Form */
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; margin-bottom: 6px; font-size: 0.85rem; font-weight: 600; }
+  .form-group input, .form-group textarea, .form-group select {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 0.875rem; color: var(--text); font-family: inherit;
+  }
+  .form-group textarea { resize: vertical; min-height: 80px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  /* Alert */
+  .alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 0.875rem; }
+  .alert-success { background: var(--green-pale); color: var(--green); }
+  .alert-error { background: #fde8e8; color: var(--danger); }
+  .alert-info { background: #e8f4fd; color: #1565c0; }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200;
+    display: none; align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: white; border-radius: 16px; padding: 28px; max-width: 540px;
+    width: 90%; max-height: 85vh; overflow-y: auto;
+  }
+  .modal h3 { margin-bottom: 20px; color: var(--green); }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+  /* Loading */
+  .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--green-pale); border-top-color: var(--green); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Page toggle */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .empty { text-align: center; padding: 40px; color: var(--muted); font-size: 0.9rem; }
+
+  .tab-bar { display: flex; gap: 4px; margin-bottom: 20px; }
+  .tab { padding: 8px 18px; border-radius: 20px; cursor: pointer; font-size: 0.875rem; border: 1px solid var(--border); background: white; }
+  .tab.active { background: var(--green); color: white; border-color: var(--green); }
+
+  .search-bar { display: flex; gap: 10px; margin-bottom: 16px; }
+  .search-bar input { flex: 1; padding: 9px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.875rem; }
+
+  #toast {
+    position: fixed; bottom: 24px; right: 24px; background: var(--green); color: white;
+    padding: 12px 20px; border-radius: 10px; font-size: 0.875rem;
+    transform: translateY(100px); transition: transform 0.3s; z-index: 500;
+  }
+  #toast.show { transform: translateY(0); }
+  #toast.error { background: var(--danger); }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    🌾 Krishi Connect
+    <span>Admin Dashboard</span>
+  </div>
+  <div class="nav-section">Overview</div>
+  <div class="nav-item active" onclick="showPage('dashboard')">
+    <span class="icon">📊</span> ড্যাশবোর্ড
+  </div>
+  <div class="nav-section">Users</div>
+  <div class="nav-item" onclick="showPage('users')">
+    <span class="icon">👥</span> ব্যবহারকারী
+  </div>
+  <div class="nav-section">Marketplace</div>
+  <div class="nav-item" onclick="showPage('listings')">
+    <span class="icon">🌾</span> ফসল লিস্টিং
+  </div>
+  <div class="nav-item" onclick="showPage('reports')">
+    <span class="icon">🚩</span> রিপোর্ট
+  </div>
+  <div class="nav-section">Advisory</div>
+  <div class="nav-item" onclick="showPage('diseases')">
+    <span class="icon">🦠</span> রোগ নির্ণয়
+  </div>
+  <div class="nav-item" onclick="showPage('tips')">
+    <span class="icon">💡</span> কৃষি পরামর্শ
+  </div>
+  <div class="nav-item" onclick="showPage('machinery')">
+    <span class="icon">🚜</span> কৃষি যন্ত্র
+  </div>
+  <div class="nav-item" onclick="showPage('news')">
+    <span class="icon">📰</span> সরকারি খবর
+  </div>
+  <div class="nav-section">Community</div>
+  <div class="nav-item" onclick="showPage('forum')">
+    <span class="icon">💬</span> ফোরাম পোস্ট
+  </div>
+  <div class="nav-section">Notifications</div>
+  <div class="nav-item" onclick="showPage('alerts')">
+    <span class="icon">⚠️</span> আবহাওয়া সতর্কতা
+  </div>
+  <div class="nav-item" onclick="showPage('push')">
+    <span class="icon">🔔</span> পুশ নোটিফিকেশন
+  </div>
+</nav>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <h1 id="page-title">ড্যাশবোর্ড</h1>
+    <div class="token-area">
+      <input type="text" id="api-token" placeholder="Admin Bearer Token" value="admin123">
+      <input type="text" id="api-base" placeholder="API Base URL" value="http://localhost:8000">
+      <button onclick="refreshCurrentPage()">🔄 Refresh</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div id="flash"></div>
+
+    <!-- ══ Dashboard ══ -->
+    <div class="page active" id="page-dashboard">
+      <div class="stat-grid" id="stats-grid">
+        <div class="stat-card"><div class="spinner"></div></div>
+      </div>
+      <div class="section">
+        <div class="section-header"><h2>জেলা অনুযায়ী ব্যবহারকারী</h2></div>
+        <div class="section-body" id="district-chart"></div>
+      </div>
+    </div>
+
+    <!-- ══ Users ══ -->
+    <div class="page" id="page-users">
+      <div class="section">
+        <div class="section-header">
+          <h2>সকল ব্যবহারকারী</h2>
+          <div style="display:flex;gap:8px;">
+            <select id="user-role-filter" onchange="loadUsers()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.85rem;">
+              <option value="">সব ভূমিকা</option>
+              <option value="farmer">কৃষক</option>
+              <option value="buyer">ক্রেতা</option>
+              <option value="admin">অ্যাডমিন</option>
+            </select>
+          </div>
+        </div>
+        <div class="section-body">
+          <table id="users-table">
+            <thead><tr><th>নাম</th><th>ফোন</th><th>ভূমিকা</th><th>জেলা</th><th>অবস্থা</th><th>কার্যক্রম</th></tr></thead>
+            <tbody id="users-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Listings ══ -->
+    <div class="page" id="page-listings">
+      <div class="section">
+        <div class="section-header">
+          <h2>ফসল লিস্টিং মডারেশন</h2>
+          <select id="listing-status-filter" onchange="loadListings()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.85rem;">
+            <option value="">সব</option>
+            <option value="active">সক্রিয়</option>
+            <option value="suspended">স্থগিত</option>
+            <option value="sold">বিক্রিত</option>
+          </select>
+        </div>
+        <div class="section-body">
+          <table>
+            <thead><tr><th>ফসল</th><th>কৃষক</th><th>জেলা</th><th>দাম</th><th>অবস্থা</th><th>কার্যক্রম</th></tr></thead>
+            <tbody id="listings-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Reports ══ -->
+    <div class="page" id="page-reports">
+      <div class="section">
+        <div class="section-header">
+          <h2>মডারেশন রিপোর্ট</h2>
+          <div class="tab-bar" style="margin:0;">
+            <div class="tab active" onclick="loadReports('pending');setActiveTab(this)">অপেক্ষমাণ</div>
+            <div class="tab" onclick="loadReports('resolved');setActiveTab(this)">সমাধান</div>
+            <div class="tab" onclick="loadReports('dismissed');setActiveTab(this)">খারিজ</div>
+          </div>
+        </div>
+        <div class="section-body">
+          <table>
+            <thead><tr><th>পোস্ট ID</th><th>রিপোর্টার</th><th>কারণ</th><th>অবস্থা</th><th>কার্যক্রম</th></tr></thead>
+            <tbody id="reports-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Diseases ══ -->
+    <div class="page" id="page-diseases">
+      <div class="section">
+        <div class="section-header">
+          <h2>রোগ নির্ণয় ডেটাবেজ</h2>
+          <button class="btn btn-primary" onclick="openModal('disease-modal')">+ নতুন রোগ যোগ করুন</button>
+        </div>
+        <div class="section-body">
+          <div class="search-bar">
+            <input type="text" id="disease-search" placeholder="ফসলের নাম দিয়ে খুঁজুন..." oninput="loadDiseases()">
+          </div>
+          <table>
+            <thead><tr><th>রোগের নাম</th><th>ফসল</th><th>তীব্রতা</th><th>কার্যক্রম</th></tr></thead>
+            <tbody id="diseases-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Tips ══ -->
+    <div class="page" id="page-tips">
+      <div class="section">
+        <div class="section-header">
+          <h2>কৃষি পরামর্শ</h2>
+          <button class="btn btn-primary" onclick="openModal('tip-modal')">+ নতুন পরামর্শ</button>
+        </div>
+        <div class="section-body">
+          <table>
+            <thead><tr><th>শিরোনাম</th><th>বিভাগ</th><th>তারিখ</th><th>কার্যক্রম</th></tr></thead>
+            <tbody id="tips-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Machinery ══ -->
+    <div class="page" id="page-machinery">
+      <div class="section">
+        <div class="section-header">
+          <h2>কৃষি যন্ত্রপাতি ডিরেক্টরি</h2>
+          <button class="btn btn-primary" onclick="openModal('machinery-modal')">+ নতুন যন্ত্র যোগ করুন</button>
+        </div>
+        <div class="section-body">
+          <table>
+            <thead><tr><th>মালিক</th><th>যন্ত্রের ধরন</th><th>জেলা</th><th>ফোন</th><th>ভাড়া/দিন</th><th>কার্যক্রম</th></tr></thead>
+            <tbody id="machinery-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ News ══ -->
+    <div class="page" id="page-news">
+      <div class="section">
+        <div class="section-header">
+          <h2>সরকারি খবর / নীতি</h2>
+          <button class="btn btn-primary" onclick="openModal('news-modal')">+ নতুন খবর প্রকাশ করুন</button>
+        </div>
+        <div class="section-body">
+          <table>
+            <thead><tr><th>শিরোনাম</th><th>বিভাগ</th><th>প্রকাশের তারিখ</th><th>কার্যক্রম</th></tr></thead>
+            <tbody id="news-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Forum ══ -->
+    <div class="page" id="page-forum">
+      <div class="section">
+        <div class="section-header">
+          <h2>কমিউনিটি ফোরাম পোস্ট</h2>
+          <label><input type="checkbox" id="include-deleted" onchange="loadForum()"> মুছে ফেলা পোস্ট দেখুন</label>
+        </div>
+        <div class="section-body">
+          <table>
+            <thead><tr><th>শিরোনাম</th><th>লেখক</th><th>ধরন</th><th>লাইক</th><th>মন্তব্য</th><th>কার্যক্রম</th></tr></thead>
+            <tbody id="forum-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Alerts ══ -->
+    <div class="page" id="page-alerts">
+      <div class="section">
+        <div class="section-header">
+          <h2>আবহাওয়া সতর্কতা</h2>
+          <button class="btn btn-primary" onclick="openModal('alert-modal')">+ নতুন সতর্কতা</button>
+        </div>
+        <div class="section-body">
+          <div id="alerts-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Push ══ -->
+    <div class="page" id="page-push">
+      <div class="section">
+        <div class="section-header"><h2>পুশ নোটিফিকেশন পাঠান</h2></div>
+        <div class="section-body">
+          <div class="alert alert-info">
+            Firebase Admin SDK সক্রিয় থাকলে এই নোটিফিকেশনগুলো সরাসরি ডিভাইসে যাবে।
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>শিরোনাম</label>
+              <input type="text" id="push-title" placeholder="নোটিফিকেশন শিরোনাম">
+            </div>
+            <div class="form-group">
+              <label>টপিক (ক্যাটেগরি)</label>
+              <select id="push-topic">
+                <option value="all_farmers">সকল কৃষক</option>
+                <option value="district_rajshahi">রাজশাহী</option>
+                <option value="district_dhaka">ঢাকা</option>
+                <option value="district_chittagong">চট্টগ্রাম</option>
+                <option value="district_sylhet">সিলেট</option>
+                <option value="district_khulna">খুলনা</option>
+                <option value="district_barisal">বরিশাল</option>
+                <option value="district_rangpur">রংপুর</option>
+                <option value="district_mymensingh">ময়মনসিংহ</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>বার্তা</label>
+            <textarea id="push-body" placeholder="বার্তার বিস্তারিত লিখুন..."></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="sendPushNotification()">📤 পাঠান</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Modals ══ -->
+
+<!-- Disease Modal -->
+<div class="modal-overlay" id="disease-modal">
+  <div class="modal">
+    <h3>🦠 রোগের তথ্য যোগ করুন</h3>
+    <input type="hidden" id="disease-edit-id">
+    <div class="form-row">
+      <div class="form-group"><label>রোগের নাম (বাংলা)*</label><input type="text" id="d-name-bn"></div>
+      <div class="form-group"><label>Disease Name (English)</label><input type="text" id="d-name-en"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>ফসলের নাম*</label><input type="text" id="d-crop"></div>
+      <div class="form-group"><label>তীব্রতা</label>
+        <select id="d-severity"><option value="low">কম</option><option value="medium" selected>মাঝারি</option><option value="high">বেশি</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label>লক্ষণসমূহ*</label><textarea id="d-symptoms"></textarea></div>
+    <div class="form-group"><label>প্রতিকার*</label><textarea id="d-remedy"></textarea></div>
+    <div class="form-group"><label>প্রতিরোধ</label><textarea id="d-prevention"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('disease-modal')">বাতিল</button>
+      <button class="btn btn-primary" onclick="saveDisease()">সংরক্ষণ করুন</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tip Modal -->
+<div class="modal-overlay" id="tip-modal">
+  <div class="modal">
+    <h3>💡 পরামর্শ যোগ করুন</h3>
+    <input type="hidden" id="tip-edit-id">
+    <div class="form-group"><label>শিরোনাম*</label><input type="text" id="t-title"></div>
+    <div class="form-group"><label>বিভাগ</label>
+      <select id="t-category">
+        <option value="general">সাধারণ</option>
+        <option value="soil">মাটি</option>
+        <option value="irrigation">সেচ</option>
+        <option value="pesticide">কীটনাশক</option>
+        <option value="harvest">ফসল কাটা</option>
+      </select>
+    </div>
+    <div class="form-group"><label>বিস্তারিত*</label><textarea id="t-body" style="min-height:120px;"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('tip-modal')">বাতিল</button>
+      <button class="btn btn-primary" onclick="saveTip()">সংরক্ষণ করুন</button>
+    </div>
+  </div>
+</div>
+
+<!-- Machinery Modal -->
+<div class="modal-overlay" id="machinery-modal">
+  <div class="modal">
+    <h3>🚜 যন্ত্রপাতি যোগ করুন</h3>
+    <input type="hidden" id="mach-edit-id">
+    <div class="form-row">
+      <div class="form-group"><label>মালিকের নাম*</label><input type="text" id="m-name"></div>
+      <div class="form-group"><label>যন্ত্রের ধরন*</label>
+        <select id="m-type">
+          <option value="tractor">ট্রাক্টর</option>
+          <option value="harvester">হার্ভেস্টার</option>
+          <option value="pump">পাম্প</option>
+          <option value="thresher">থ্রেশার</option>
+          <option value="other">অন্যান্য</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>ফোন নম্বর*</label><input type="tel" id="m-phone"></div>
+      <div class="form-group"><label>ভাড়া (টাকা/দিন)</label><input type="number" id="m-rate" min="0"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>জেলা*</label><input type="text" id="m-district"></div>
+      <div class="form-group"><label>উপজেলা</label><input type="text" id="m-upazila"></div>
+    </div>
+    <div class="form-group"><label>বিবরণ</label><textarea id="m-desc"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('machinery-modal')">বাতিল</button>
+      <button class="btn btn-primary" onclick="saveMachinery()">সংরক্ষণ করুন</button>
+    </div>
+  </div>
+</div>
+
+<!-- News Modal -->
+<div class="modal-overlay" id="news-modal">
+  <div class="modal">
+    <h3>📰 সরকারি খবর প্রকাশ করুন</h3>
+    <input type="hidden" id="news-edit-id">
+    <div class="form-group"><label>শিরোনাম*</label><input type="text" id="n-title"></div>
+    <div class="form-group"><label>বিভাগ</label>
+      <select id="n-category">
+        <option value="general">সাধারণ</option>
+        <option value="subsidy">ভর্তুকি</option>
+        <option value="policy">নীতি</option>
+        <option value="alert">সতর্কতা</option>
+      </select>
+    </div>
+    <div class="form-group"><label>বিষয়বস্তু*</label><textarea id="n-body" style="min-height:150px;"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>উৎস</label><input type="text" id="n-source" placeholder="যেমন: কৃষি মন্ত্রণালয়"></div>
+      <div class="form-group"><label>বাহ্যিক লিংক</label><input type="url" id="n-url"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('news-modal')">বাতিল</button>
+      <button class="btn btn-primary" onclick="saveNews()">প্রকাশ করুন</button>
+    </div>
+  </div>
+</div>
+
+<!-- Alert Modal -->
+<div class="modal-overlay" id="alert-modal">
+  <div class="modal">
+    <h3>⚠️ আবহাওয়া সতর্কতা তৈরি করুন</h3>
+    <div class="form-group"><label>শিরোনাম*</label><input type="text" id="al-title"></div>
+    <div class="form-row">
+      <div class="form-group"><label>সতর্কতার ধরন</label>
+        <select id="al-type">
+          <option value="rain">বৃষ্টি</option>
+          <option value="storm">ঝড়</option>
+          <option value="flood">বন্যা</option>
+          <option value="drought">খরা</option>
+          <option value="cold">শীত</option>
+          <option value="heat">গরম</option>
+        </select>
+      </div>
+      <div class="form-group"><label>তীব্রতা</label>
+        <select id="al-severity">
+          <option value="low">কম</option>
+          <option value="medium" selected>মাঝারি</option>
+          <option value="high">বেশি</option>
+          <option value="critical">সংকটজনক</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label>জেলা (খালি রাখলে সব জেলায়)</label><input type="text" id="al-district"></div>
+    <div class="form-group"><label>বার্তা*</label><textarea id="al-message"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('alert-modal')">বাতিল</button>
+      <button class="btn btn-primary" onclick="saveAlert()">প্রকাশ ও পাঠান</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const BASE = () => document.getElementById('api-base').value.replace(/\/$/, '');
+const TOKEN = () => document.getElementById('api-token').value.trim();
+
+async function api(method, path, body) {
+  const opts = {
+    method,
+    headers: { 'Authorization': `Bearer ${TOKEN()}`, 'Content-Type': 'application/json' }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(BASE() + path, opts);
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({ detail: r.statusText }));
+    throw new Error(err.detail || JSON.stringify(err));
+  }
+  if (r.status === 204) return null;
+  return r.json();
+}
+
+function toast(msg, isError = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show' + (isError ? ' error' : '');
+  setTimeout(() => el.className = '', 3000);
+}
+
+function flash(msg, type = 'success') {
+  document.getElementById('flash').innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+  setTimeout(() => document.getElementById('flash').innerHTML = '', 4000);
+}
+
+let currentPage = 'dashboard';
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+  currentPage = id;
+  const titles = {
+    dashboard:'ড্যাশবোর্ড', users:'ব্যবহারকারী', listings:'ফসল লিস্টিং',
+    reports:'মডারেশন রিপোর্ট', diseases:'রোগ নির্ণয়', tips:'কৃষি পরামর্শ',
+    machinery:'কৃষি যন্ত্রপাতি', news:'সরকারি খবর', forum:'কমিউনিটি ফোরাম',
+    alerts:'আবহাওয়া সতর্কতা', push:'পুশ নোটিফিকেশন'
+  };
+  document.getElementById('page-title').textContent = titles[id] || id;
+  loadPage(id);
+}
+
+function refreshCurrentPage() { loadPage(currentPage); }
+
+function loadPage(id) {
+  const map = {
+    dashboard: loadDashboard, users: loadUsers, listings: loadListings,
+    reports: () => loadReports('pending'), diseases: loadDiseases, tips: loadTips,
+    machinery: loadMachinery, news: loadNews, forum: loadForum,
+    alerts: loadAlerts, push: () => {}
+  };
+  if (map[id]) map[id]();
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function setActiveTab(el) {
+  el.closest('.tab-bar').querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ── Dashboard ──────────────────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const s = await api('GET', '/admin/stats');
+    document.getElementById('stats-grid').innerHTML = `
+      <div class="stat-card"><div class="num">${s.total_users}</div><div class="label">মোট ব্যবহারকারী</div></div>
+      <div class="stat-card"><div class="num">${s.total_farmers}</div><div class="label">কৃষক</div></div>
+      <div class="stat-card"><div class="num">${s.total_buyers}</div><div class="label">ক্রেতা</div></div>
+      <div class="stat-card"><div class="num">${s.active_listings}</div><div class="label">সক্রিয় লিস্টিং</div></div>
+      <div class="stat-card"><div class="num">${s.total_rates}</div><div class="label">মোট দর</div></div>
+      <div class="stat-card"><div class="num">${s.total_forum_posts}</div><div class="label">ফোরাম পোস্ট</div></div>
+      <div class="stat-card"><div class="num" style="color:var(--danger)">${s.pending_reports}</div><div class="label">অপেক্ষমাণ রিপোর্ট</div></div>
+      <div class="stat-card"><div class="num" style="color:var(--warning)">${s.active_weather_alerts}</div><div class="label">সক্রিয় সতর্কতা</div></div>
+      <div class="stat-card"><div class="num">${s.total_calls}</div><div class="label">মোট কল</div></div>
+    `;
+    const dc = s.users_by_district || {};
+    const sorted = Object.entries(dc).sort((a,b) => b[1]-a[1]).slice(0,10);
+    const max = sorted[0]?.[1] || 1;
+    document.getElementById('district-chart').innerHTML = sorted.map(([d,c]) => `
+      <div style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:3px;">
+          <span>${d}</span><strong>${c}</strong>
+        </div>
+        <div style="background:var(--green-pale);border-radius:4px;height:8px;">
+          <div style="background:var(--green);width:${(c/max*100).toFixed(1)}%;height:8px;border-radius:4px;"></div>
+        </div>
+      </div>
+    `).join('') || '<p class="empty">কোনো ডেটা নেই</p>';
+  } catch(e) { toast(e.message, true); }
+}
+
+// ── Users ──────────────────────────────────────────────────────────────────
+async function loadUsers() {
+  const role = document.getElementById('user-role-filter').value;
+  try {
+    const users = await api('GET', `/admin/users?limit=100${role?'&role='+role:''}`);
+    document.getElementById('users-tbody').innerHTML = users.map(u => `
+      <tr>
+        <td><strong>${u.name || '—'}</strong><br><small style="color:var(--muted)">${u.uid || u.id || ''}</small></td>
+        <td>${u.phone || '—'}</td>
+        <td><span class="badge ${u.role==='admin'?'badge-orange':u.role==='buyer'?'badge-green':'badge-gray'}">${roleLabel(u.role)}</span></td>
+        <td>${u.district || '—'}${u.upazila?', '+u.upazila:''}</td>
+        <td><span class="badge ${u.is_banned?'badge-red':'badge-green'}">${u.is_banned?'নিষিদ্ধ':'সক্রিয়'}</span></td>
+        <td>
+          ${!u.is_banned ? `<button class="btn btn-sm btn-danger" onclick="banUser('${u.uid||u.id}')">নিষিদ্ধ</button>` : `<button class="btn btn-sm btn-outline" onclick="unbanUser('${u.uid||u.id}')">ফিরিয়ে আনুন</button>`}
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan="6" class="empty">কোনো ব্যবহারকারী নেই</td></tr>';
+  } catch(e) { toast(e.message, true); }
+}
+
+function roleLabel(r) {
+  return {farmer:'কৃষক', buyer:'ক্রেতা', admin:'অ্যাডমিন'}[r] || r || 'অজানা';
+}
+
+async function banUser(uid) {
+  if (!confirm('এই ব্যবহারকারীকে নিষিদ্ধ করবেন?')) return;
+  try { await api('PATCH', `/admin/users/${uid}`, {is_banned: true}); toast('নিষিদ্ধ করা হয়েছে'); loadUsers(); }
+  catch(e) { toast(e.message, true); }
+}
+async function unbanUser(uid) {
+  try { await api('PATCH', `/admin/users/${uid}`, {is_banned: false}); toast('অ্যাকাউন্ট পুনরায় সক্রিয়'); loadUsers(); }
+  catch(e) { toast(e.message, true); }
+}
+
+// ── Listings ───────────────────────────────────────────────────────────────
+async function loadListings() {
+  const status = document.getElementById('listing-status-filter').value;
+  try {
+    const items = await api('GET', `/admin/listings?limit=100${status?'&status='+status:''}`);
+    document.getElementById('listings-tbody').innerHTML = items.map(l => `
+      <tr>
+        <td><strong>${l.crop_name}</strong><br><small style="color:var(--muted)">${l.quantity} ${l.unit}</small></td>
+        <td>${l.farmer_name || '—'}</td>
+        <td>${l.district || '—'}</td>
+        <td>৳${l.price_per_unit}/${l.unit}</td>
+        <td><span class="badge ${l.status==='active'?'badge-green':l.status==='suspended'?'badge-red':'badge-gray'}">${l.status}</span></td>
+        <td>
+          ${l.status==='active'?`<button class="btn btn-sm btn-warning" onclick="moderateListing('${l.id}','suspended')">স্থগিত</button>`:''}
+          ${l.status==='suspended'?`<button class="btn btn-sm btn-outline" onclick="moderateListing('${l.id}','active')">সক্রিয়</button>`:''}
+          <button class="btn btn-sm btn-danger" onclick="deleteListing('${l.id}')">মুছুন</button>
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan="6" class="empty">কোনো লিস্টিং নেই</td></tr>';
+  } catch(e) { toast(e.message, true); }
+}
+
+async function moderateListing(id, status) {
+  try { await api('PATCH', `/admin/listings/${id}`, {status}); toast('আপডেট হয়েছে'); loadListings(); }
+  catch(e) { toast(e.message, true); }
+}
+async function deleteListing(id) {
+  if (!confirm('এই লিস্টিং স্থায়ীভাবে মুছবেন?')) return;
+  try { await api('DELETE', `/admin/listings/${id}`); toast('মুছে ফেলা হয়েছে'); loadListings(); }
+  catch(e) { toast(e.message, true); }
+}
+
+// ── Reports ────────────────────────────────────────────────────────────────
+async function loadReports(status = 'pending') {
+  try {
+    const items = await api('GET', `/admin/reports?status=${status}&limit=100`);
+    document.getElementById('reports-tbody').innerHTML = items.map(r => `
+      <tr>
+        <td><small>${r.post_id || '—'}</small></td>
+        <td><small>${r.reporter_id}</small></td>
+        <td>${r.reason}</td>
+        <td><span class="badge ${r.status==='pending'?'badge-orange':r.status==='resolved'?'badge-red':'badge-gray'}">${r.status}</span></td>
+        <td>
+          ${r.status==='pending'?`
+            <button class="btn btn-sm btn-danger" onclick="resolveReport('${r.id}','resolved')">সমাধান ও পোস্ট মুছুন</button>
+            <button class="btn btn-sm btn-outline" onclick="resolveReport('${r.id}','dismissed')">খারিজ</button>
+          `:'—'}
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan="5" class="empty">কোনো রিপোর্ট নেই</td></tr>';
+  } catch(e) { toast(e.message, true); }
+}
+
+async function resolveReport(id, action) {
+  try { await api('PATCH', `/admin/reports/${id}`, {action}); toast('রিপোর্ট আপডেট'); loadReports(); }
+  catch(e) { toast(e.message, true); }
+}
+
+// ── Diseases ───────────────────────────────────────────────────────────────
+async function loadDiseases() {
+  const q = document.getElementById('disease-search').value;
+  try {
+    const items = await api('GET', `/advisory/diseases${q?'?crop='+encodeURIComponent(q):''}`);
+    document.getElementById('diseases-tbody').innerHTML = items.map(d => `
+      <tr>
+        <td><strong>${d.name_bn}</strong><br><small>${d.name_en||''}</small></td>
+        <td>${d.crop_name}</td>
+        <td><span class="badge ${d.severity==='high'?'badge-red':d.severity==='medium'?'badge-orange':'badge-gray'}">${d.severity||'—'}</span></td>
+        <td>
+          <button class="btn btn-sm btn-outline" onclick="editDisease(${JSON.stringify(d).replace(/"/g,'&quot;')})">সম্পাদনা</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteDisease('${d.id}')">মুছুন</button>
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan="4" class="empty">কোনো রোগ নেই</td></tr>';
+  } catch(e) { toast(e.message, true); }
+}
+
+function editDisease(d) {
+  document.getElementById('disease-edit-id').value = d.id;
+  document.getElementById('d-name-bn').value = d.name_bn||'';
+  document.getElementById('d-name-en').value = d.name_en||'';
+  document.getElementById('d-crop').value = d.crop_name||'';
+  document.getElementById('d-severity').value = d.severity||'medium';
+  document.getElementById('d-symptoms').value = d.symptoms_bn||'';
+  document.getElementById('d-remedy').value = d.remedy_bn||'';
+  document.getElementById('d-prevention').value = d.prevention_bn||'';
+  openModal('disease-modal');
+}
+
+async function saveDisease() {
+  const id = document.getElementById('disease-edit-id').value;
+  const body = {
+    name_bn: document.getElementById('d-name-bn').value,
+    name_en: document.getElementById('d-name-en').value,
+    crop_name: document.getElementById('d-crop').value,
+    severity: document.getElementById('d-severity').value,
+    symptoms_bn: document.getElementById('d-symptoms').value,
+    remedy_bn: document.getElementById('d-remedy').value,
+    prevention_bn: document.getElementById('d-prevention').value,
+  };
+  try {
+    if (id) await api('PUT', `/advisory/diseases/${id}`, body);
+    else await api('POST', `/advisory/diseases`, body);
+    closeModal('disease-modal');
+    document.getElementById('disease-edit-id').value = '';
+    toast('সংরক্ষণ হয়েছে ✓');
+    loadDiseases();
+  } catch(e) { toast(e.message, true); }
+}
+
+async function deleteDisease(id) {
+  if (!confirm('মুছবেন?')) return;
+  try { await api('DELETE', `/advisory/diseases/${id}`); toast('মুছে ফেলা হয়েছে'); loadDiseases(); }
+  catch(e) { toast(e.message, true); }
+}
+
+// ── Tips ───────────────────────────────────────────────────────────────────
+async function loadTips() {
+  try {
+    const items = await api('GET', '/advisory/tips');
+    document.getElementById('tips-tbody').innerHTML = items.map(t => `
+      <tr>
+        <td><strong>${t.title_bn}</strong></td>
+        <td><span class="badge badge-green">${t.category}</span></td>
+        <td>${t.created_at ? new Date(t.created_at).toLocaleDateString('bn-BD') : '—'}</td>
+        <td>
+          <button class="btn btn-sm btn-danger" onclick="deleteTip('${t.id}')">মুছুন</button>
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan="4" class="empty">কোনো পরামর্শ নেই</td></tr>';
+  } catch(e) { toast(e.message, true); }
+}
+
+async function saveTip() {
+  const id = document.getElementById('tip-edit-id').value;
+  const body = {
+    title_bn: document.getElementById('t-title').value,
+    body_bn: document.getElementById('t-body').value,
+    category: document.getElementById('t-category').value,
+  };
+  try {
+    await api('POST', '/advisory/tips', body);
+    closeModal('tip-modal');
+    toast('পরামর্শ সংরক্ষণ হয়েছে ✓');
+    loadTips();
+  } catch(e) { toast(e.message, true); }
+}
+
+async function deleteTip(id) {
+  if (!confirm('মুছবেন?')) return;
+  try { await api('DELETE', `/advisory/tips/${id}`); toast('মুছে ফেলা হয়েছে'); loadTips(); }
+  catch(e) { toast(e.message, true); }
+}
+
+// ── Machinery ──────────────────────────────────────────────────────────────
+async function loadMachinery() {
+  try {
+    const items = await api('GET', '/machinery');
+    document.getElementById('machinery-tbody').innerHTML = items.map(m => `
+      <tr>
+        <td><strong>${m.name}</strong></td>
+        <td><span class="badge badge-green">${m.machine_type}</span></td>
+        <td>${m.district}</td>
+        <td>${m.phone}</td>
+        <td>${m.daily_rate_bdt ? '৳'+m.daily_rate_bdt : '—'}</td>
+        <td>
+          <button class="btn btn-sm btn-danger" onclick="deleteMachinery('${m.id}')">মুছুন</button>
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan="6" class="empty">কোনো যন্ত্র নেই</td></tr>';
+  } catch(e) { toast(e.message, true); }
+}
+
+async function saveMachinery() {
+  const body = {
+    name: document.getElementById('m-name').value,
+    machine_type: document.getElementById('m-type').value,
+    phone: document.getElementById('m-phone').value,
+    district: document.getElementById('m-district').value,
+    upazila: document.getElementById('m-upazila').value || null,
+    daily_rate_bdt: parseFloat(document.getElementById('m-rate').value) || null,
+    description_bn: document.getElementById('m-desc').value || null,
+  };
+  try {
+    await api('POST', '/machinery', body);
+    closeModal('machinery-modal');
+    toast('যন্ত্র যোগ হয়েছে ✓');
+    loadMachinery();
+  } catch(e) { toast(e.message, true); }
+}
+
+async function deleteMachinery(id) {
+  if (!confirm('মুছবেন?')) return;
+  try { await api('DELETE', `/machinery/${id}`); toast('মুছে ফেলা হয়েছে'); loadMachinery(); }
+  catch(e) { toast(e.message, true); }
+}
+
+// ── News ───────────────────────────────────────────────────────────────────
+async function loadNews() {
+  try {
+    const items = await api('GET', '/news?limit=50');
+    document.getElementById('news-tbody').innerHTML = items.map(n => `
+      <tr>
+        <td><strong>${n.title_bn}</strong></td>
+        <td><span class="badge badge-green">${n.category}</span></td>
+        <td>${n.published_at ? new Date(n.published_at).toLocaleDateString('bn-BD') : '—'}</td>
+        <td>
+          <button class="btn btn-sm btn-danger" onclick="deleteNews('${n.id}')">মুছুন</button>
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan="4" class="empty">কোনো খবর নেই</td></tr>';
+  } catch(e) { toast(e.message, true); }
+}
+
+async function saveNews() {
+  const body = {
+    title_bn: document.getElementById('n-title').value,
+    body_bn: document.getElementById('n-body').value,
+    category: document.getElementById('n-category').value,
+    source: document.getElementById('n-source').value || null,
+    external_url: document.getElementById('n-url').value || null,
+  };
+  try {
+    await api('POST', '/news', body);
+    closeModal('news-modal');
+    toast('খবর প্রকাশিত হয়েছে ✓');
+    loadNews();
+  } catch(e) { toast(e.message, true); }
+}
+
+async function deleteNews(id) {
+  if (!confirm('মুছবেন?')) return;
+  try { await api('DELETE', `/news/${id}`); toast('মুছে ফেলা হয়েছে'); loadNews(); }
+  catch(e) { toast(e.message, true); }
+}
+
+// ── Forum ──────────────────────────────────────────────────────────────────
+async function loadForum() {
+  const incDel = document.getElementById('include-deleted').checked;
+  try {
+    const items = await api('GET', `/admin/forum/posts?include_deleted=${incDel}&limit=100`);
+    document.getElementById('forum-tbody').innerHTML = items.map(p => `
+      <tr style="${p.is_deleted?'opacity:0.5;':''}">
+        <td><strong>${p.title||'—'}</strong><br><small>${p.body?.substring(0,60)}...</small></td>
+        <td>${p.author_name||'—'}</td>
+        <td><span class="badge badge-gray">${p.post_type}</span></td>
+        <td>❤️ ${p.likes||0}</td>
+        <td>💬 ${p.comment_count||0}</td>
+        <td>
+          ${!p.is_deleted?`<button class="btn btn-sm btn-danger" onclick="deleteForumPost('${p.id}')">মুছুন</button>`:'<span class="badge badge-red">মুছে ফেলা</span>'}
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan="6" class="empty">কোনো পোস্ট নেই</td></tr>';
+  } catch(e) { toast(e.message, true); }
+}
+
+async function deleteForumPost(id) {
+  if (!confirm('এই পোস্ট স্থায়ীভাবে মুছবেন?')) return;
+  try { await api('DELETE', `/admin/forum/posts/${id}`); toast('পোস্ট মুছে ফেলা হয়েছে'); loadForum(); }
+  catch(e) { toast(e.message, true); }
+}
+
+// ── Weather Alerts ─────────────────────────────────────────────────────────
+async function loadAlerts() {
+  try {
+    const items = await api('GET', '/alerts/weather');
+    const alertIcons = {rain:'🌧️', storm:'⛈️', flood:'🌊', drought:'☀️', cold:'❄️', heat:'🔥'};
+    document.getElementById('alerts-list').innerHTML = items.length ? items.map(a => `
+      <div style="border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;display:flex;align-items:flex-start;gap:14px;">
+        <div style="font-size:2rem;">${alertIcons[a.alert_type]||'⚠️'}</div>
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <strong>${a.title_bn}</strong>
+            <span class="badge ${a.severity==='critical'||a.severity==='high'?'badge-red':a.severity==='medium'?'badge-orange':'badge-gray'}">${a.severity}</span>
+            ${a.district?`<span class="badge badge-green">${a.district}</span>`:'<span class="badge badge-green">সব জেলা</span>'}
+          </div>
+          <p style="color:var(--muted);font-size:0.875rem;">${a.message_bn}</p>
+          <small style="color:var(--muted);">${a.created_at ? new Date(a.created_at).toLocaleString('bn-BD') : ''}</small>
+        </div>
+        <button class="btn btn-sm btn-danger" onclick="deactivateAlert('${a.id}')">নিষ্ক্রিয়</button>
+      </div>
+    `).join('') : '<p class="empty">কোনো সক্রিয় সতর্কতা নেই</p>';
+  } catch(e) { toast(e.message, true); }
+}
+
+async function saveAlert() {
+  const body = {
+    title_bn: document.getElementById('al-title').value,
+    message_bn: document.getElementById('al-message').value,
+    alert_type: document.getElementById('al-type').value,
+    severity: document.getElementById('al-severity').value,
+    district: document.getElementById('al-district').value || null,
+  };
+  try {
+    await api('POST', '/alerts/weather', body);
+    closeModal('alert-modal');
+    toast('সতর্কতা প্রেরণ করা হয়েছে ✓');
+    loadAlerts();
+  } catch(e) { toast(e.message, true); }
+}
+
+async function deactivateAlert(id) {
+  try { await api('DELETE', `/alerts/weather/${id}`); toast('সতর্কতা নিষ্ক্রিয় হয়েছে'); loadAlerts(); }
+  catch(e) { toast(e.message, true); }
+}
+
+// ── Push Notification ──────────────────────────────────────────────────────
+async function sendPushNotification() {
+  const body = {
+    title: document.getElementById('push-title').value,
+    body: document.getElementById('push-body').value,
+    topic: document.getElementById('push-topic').value,
+  };
+  if (!body.title || !body.body) { toast('শিরোনাম ও বার্তা আবশ্যক', true); return; }
+  try {
+    const r = await api('POST', '/notifications/fcm/send-topic', body);
+    toast(`পাঠানো হয়েছে: ${r.status}`);
+  } catch(e) { toast(e.message, true); }
+}
+
+// Initial load
+loadDashboard();
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
+});
+</script>
+</body>
+</html>

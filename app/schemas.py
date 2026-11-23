@@ -51,6 +51,8 @@ class UserUpdate(BaseModel):
     address: str | None = None
     latitude: float | None = Field(None, ge=-90, le=90)
     longitude: float | None = Field(None, ge=-180, le=180)
+    farm_size_bigha: float | None = Field(None, ge=0, description="Farm land size in bigha")
+    fcm_token: str | None = None
 
 
 class UserOut(BaseModel):
@@ -63,6 +65,8 @@ class UserOut(BaseModel):
     address: str | None = None
     latitude: float | None = None
     longitude: float | None = None
+    farm_size_bigha: float | None = None
+    is_verified: bool = False
 
 
 # ---------- listings ----------
