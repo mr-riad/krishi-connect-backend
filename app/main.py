@@ -9,6 +9,12 @@ from .routers import (
     advisory, machinery_news, forum, notifications, admin,
 )
 
+# Optional import if disease router exists from other branches
+try:
+    from .routers import disease
+except ImportError:
+    disease = None
+
 settings = get_settings()
 
 app = FastAPI(
@@ -31,7 +37,7 @@ app.add_middleware(
 )
 
 # ── Register all API routers (must come BEFORE any app.mount()) ──────────────
-for r in (
+routers_to_include = [
     # Module 1 – Marketplace & Communication
     users.router,
     listings.router,
@@ -46,7 +52,12 @@ for r in (
     # Module 3 – Community & Admin
     forum.router,
     admin.router,
-):
+]
+
+if disease and hasattr(disease, "router"):
+    routers_to_include.append(disease.router)
+
+for r in routers_to_include:
     app.include_router(r)
 
 
