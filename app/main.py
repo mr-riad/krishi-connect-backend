@@ -4,27 +4,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .config import get_settings
-from .routers import (
-    calendar, calls, chat, listings, rates, users,
-    advisory, machinery_news, forum, notifications, admin,
-)
-
-# Optional import if disease router exists from other branches
-try:
-    from .routers import disease
-except ImportError:
-    disease = None
+from .routers import calendar, calls, chat, listings, rates, users
 
 settings = get_settings()
 
 app = FastAPI(
     title=settings.app_name,
-    version="2.0.0",
-    description=(
-        "Krishi Connect full backend — Marketplace & Communication, "
-        "Agricultural Advisory, Community Forum, Weather Alerts, "
-        "Push Notifications, and Admin Dashboard."
-    ),
+    version="1.0.0",
+    description="Module 1 backend: Marketplace & Communication (listings, rate board, chat, call, search).",
 )
 
 origins = [o.strip() for o in settings.cors_origins.split(",")]
@@ -36,28 +23,8 @@ app.add_middleware(
     allow_credentials=True,
 )
 
-# ── Register all API routers (must come BEFORE any app.mount()) ──────────────
-routers_to_include = [
-    # Module 1 – Marketplace & Communication
-    users.router,
-    listings.router,
-    rates.router,
-    chat.router,
-    calls.router,
-    # Module 2 – Agricultural Advisory & Info
-    calendar.router,
-    advisory.router,
-    machinery_news.router,
-    notifications.router,
-    # Module 3 – Community & Admin
-    forum.router,
-    admin.router,
-]
-
-if disease and hasattr(disease, "router"):
-    routers_to_include.append(disease.router)
-
-for r in routers_to_include:
+# Register API routers FIRST (before any app.mount calls)
+for r in (users.router, listings.router, rates.router, chat.router, calls.router, calendar.router):
     app.include_router(r)
 
 
